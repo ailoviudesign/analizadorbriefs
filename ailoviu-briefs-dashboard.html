@@ -5,7 +5,7 @@
 <div id="ailoviu-briefs-app">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -23,7 +23,7 @@
     --fuchsia: #D6336C;
     --green: #2E9955;
     --red: #E8503A;
-    font-family: 'Figtree', system-ui, sans-serif;
+    font-family: 'Nunito', system-ui, sans-serif;
     color: var(--ink);
     background: var(--bg);
     border-radius: 24px;
@@ -33,20 +33,20 @@
     margin: 0 auto;
   }
   #ailoviu-briefs-app *, #ailoviu-briefs-app *::before, #ailoviu-briefs-app *::after { box-sizing: border-box; }
-  #ailoviu-briefs-app .mono { font-family: 'Space Mono', monospace; }
-  #ailoviu-briefs-app h1, #ailoviu-briefs-app h2, #ailoviu-briefs-app h3 { font-family: 'Figtree', sans-serif; margin: 0; letter-spacing: -0.02em; }
+  #ailoviu-briefs-app .mono { font-family: 'Nunito', monospace; }
+  #ailoviu-briefs-app h1, #ailoviu-briefs-app h2, #ailoviu-briefs-app h3 { font-family: 'Nunito', sans-serif; margin: 0; letter-spacing: -0.02em; }
   #ailoviu-briefs-app button { font-family: inherit; cursor: pointer; border: none; }
   #ailoviu-briefs-app a { color: var(--purple); }
 
   #ab-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
-  #ab-header h1 { font-size: 28px; font-weight: 800; }
+  #ab-header h1 { font-size: 30px; font-weight: 600; }
   #ab-header p { margin: 4px 0 0; color: var(--ink-soft); font-size: 14px; }
   #ab-config-btn { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 8px 14px; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
   #ab-config-btn:hover { border-color: var(--purple); color: var(--purple); }
 
   #ab-config-panel { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
   #ab-config-panel label { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); margin-bottom: 4px; }
-  #ab-config-panel input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; margin-bottom: 14px; font-family: 'Space Mono', monospace; }
+  #ab-config-panel input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; margin-bottom: 14px; font-family: 'Nunito', monospace; }
   #ab-config-panel .ab-row { display: flex; gap: 16px; flex-wrap: wrap; }
   #ab-config-panel .ab-row > div { flex: 1; min-width: 220px; }
   #ab-save-config { background: var(--purple); color: #fff; padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: 13px; }
@@ -62,24 +62,24 @@
   #ab-file-input { display: none; }
   #ab-pick-btn { margin-top: 10px; background: var(--ink); color: #fff; padding: 8px 16px; border-radius: 10px; font-size: 12px; font-weight: 700; }
 
-  #ab-brief-list { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 460px; overflow-y: auto; }
+  #ab-brief-list { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; max-height: 460px; overflow-y: auto; }
   .ab-brief-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; cursor: pointer; border: 1px solid transparent; }
   .ab-brief-item:hover { background: #F6F3EC; }
   .ab-brief-item.ab-active { background: #F4F1FE; border-color: var(--purple); }
   .ab-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .ab-brief-item .ab-bi-text { min-width: 0; }
-  .ab-brief-item .ab-bi-name { font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ab-brief-item .ab-bi-name { font-weight: 500; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ab-brief-item .ab-bi-sub { font-size: 11px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #ab-empty-list { font-size: 13px; color: var(--ink-soft); text-align: center; padding: 20px 8px; }
-  #ab-overview-btn { width: 100%; text-align: left; background: transparent; padding: 10px 12px; border-radius: 12px; font-weight: 700; font-size: 13px; margin-top: 14px; border: 1px solid var(--border); }
-  #ab-overview-btn:hover { border-color: var(--purple); color: var(--purple); }
+  #ab-overview-btn { width: 100%; text-align: left; background: transparent; padding: 10px 12px; border-radius: 12px; font-weight: 700; font-size: 16px; margin-top: 14px; border: 1px solid var(--border); }
+  #ab-overview-btn:hover { border-color: var(--orange); color: var(--orange); }
 
   #ab-main { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 26px; min-height: 420px; }
   #ab-main-empty { color: var(--ink-soft); text-align: center; padding: 80px 20px; font-size: 14px; }
 
   .ab-stat-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 24px; }
   .ab-stat { background: var(--bg); border-radius: 14px; padding: 14px 18px; min-width: 130px; }
-  .ab-stat .ab-stat-num { font-family: 'Space Mono', monospace; font-size: 26px; font-weight: 700; }
+  .ab-stat .ab-stat-num { font-family: 'Nunito', monospace; font-size: 26px; font-weight: 700; }
   .ab-stat .ab-stat-label { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
 
   .ab-section-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); margin: 28px 0 12px; }
@@ -92,20 +92,20 @@
   .ab-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-soft); }
 
   .ab-detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
-  .ab-detail-head h2 { font-size: 22px; font-weight: 800; }
-  .ab-detail-head .ab-meta { font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
+  .ab-detail-head h2 { font-size: 22px; font-weight: 600; }
+  .ab-detail-head .ab-meta { font-size: 14px; color: var(--ink-soft); margin-top: 10px; }
   #ab-delete-btn { background: #FCEBE7; color: var(--red); padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; }
   #ab-delete-btn:hover { background: var(--red); color: #fff; }
 
-  .ab-card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .ab-card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
   @media (max-width: 620px) { .ab-card-grid { grid-template-columns: 1fr; } }
-  .ab-field-card { background: var(--bg); border-radius: 14px; padding: 14px 16px; }
+  .ab-field-card { background: var(--bg); border-radius: 12px; padding: 14px 16px; }
   .ab-field-card.ab-full { grid-column: 1 / -1; }
-  .ab-field-card h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); margin-bottom: 6px; }
-  .ab-field-card p { font-size: 13.5px; line-height: 1.5; margin: 0; white-space: pre-wrap; }
+  .ab-field-card h4 { font-size: 16px; text-transform: uppercase; letter-spacing: 0.02em; color: var(--ink-soft); margin-bottom: 15px; }
+  .ab-field-card p { font-size: 14px; line-height: 1.5; margin: 0; white-space: pre-wrap; }
   .ab-field-card p:empty::after { content: "—"; color: var(--ink-soft); }
   .ab-pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
-  .ab-tag { background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; font-size: 12px; }
+  .ab-tag { background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; font-size: 14px; }
 
   .ab-bipolar { display: flex; flex-direction: column; gap: 14px; margin-top: 6px; }
   .ab-bp-row { display: grid; grid-template-columns: 90px 1fr 90px; align-items: center; gap: 10px; font-size: 12px; }
@@ -134,7 +134,8 @@
 <div id="ab-header">
   <div>
     <h1>Briefs de marca</h1>
-    <p>Panel interno de Ailoviu — subí un PDF de brief y quedan cargados acá, con sus palabras clave y su perfil de marca.</p>
+  </br>
+    <p>Panel de análisis de briefs de Ailoviu.</p>
   </div>
   <button id="ab-config-btn" type="button">Configuración</button>
 </div>
@@ -162,7 +163,7 @@
       <input id="ab-file-input" type="file" accept="application/pdf" multiple>
       <button id="ab-pick-btn" type="button">Elegir archivo</button>
     </div>
-    <button id="ab-overview-btn" type="button">📊 Ver panel general</button>
+    <button id="ab-overview-btn" type="button">PANEL GENERAL 💾</button>
     <ul id="ab-brief-list"></ul>
   </div>
   <div id="ab-main">
@@ -484,7 +485,6 @@
         <span class="ab-dot" style="background:${colorFor(i)}"></span>
         <span class="ab-bi-text">
           <span class="ab-bi-name">${escHtml(b.cliente || 'Sin nombre')}</span>
-          <span class="ab-bi-sub">${escHtml(b.nombre_marca || '—')} · ${date}</span>
         </span>`;
       li.addEventListener('click', () => { activeId = b.id; render(); });
       list.appendChild(li);
@@ -579,7 +579,6 @@
       <div class="ab-detail-head">
         <div>
           <h2>${escHtml(b.cliente || 'Sin nombre')}</h2>
-          <div class="ab-meta">${escHtml(b.nombre_marca || 'Sin nombre de marca')} · ${escHtml(b.correo || '')} · ${date}</div>
         </div>
         <button id="ab-delete-btn" type="button">Eliminar</button>
       </div>
