@@ -1,0 +1,642 @@
+<!-- Ailoviu — Dashboard de Briefs de Marca
+     Widget HTML autocontenido para Elementor.
+     Requiere: un proyecto Supabase con la tabla "briefs" (ver supabase-schema.sql).
+     Carga PDFs de brief -> extrae texto con pdf.js -> parsea campos -> guarda en Supabase. -->
+<div id="ailoviu-briefs-app">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  #ailoviu-briefs-app {
+    --bg: #FBF8F3;
+    --ink: #241F2E;
+    --ink-soft: #6b6478;
+    --card: #ffffff;
+    --border: #ECE6DA;
+    --purple: #5B3CE8;
+    --teal: #0FA3A3;
+    --orange: #FF8A3D;
+    --yellow: #C99A00;
+    --fuchsia: #D6336C;
+    --green: #2E9955;
+    --red: #E8503A;
+    font-family: 'Figtree', system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    border-radius: 24px;
+    padding: 28px;
+    box-sizing: border-box;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  #ailoviu-briefs-app *, #ailoviu-briefs-app *::before, #ailoviu-briefs-app *::after { box-sizing: border-box; }
+  #ailoviu-briefs-app .mono { font-family: 'Space Mono', monospace; }
+  #ailoviu-briefs-app h1, #ailoviu-briefs-app h2, #ailoviu-briefs-app h3 { font-family: 'Figtree', sans-serif; margin: 0; letter-spacing: -0.02em; }
+  #ailoviu-briefs-app button { font-family: inherit; cursor: pointer; border: none; }
+  #ailoviu-briefs-app a { color: var(--purple); }
+
+  #ab-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+  #ab-header h1 { font-size: 28px; font-weight: 800; }
+  #ab-header p { margin: 4px 0 0; color: var(--ink-soft); font-size: 14px; }
+  #ab-config-btn { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 8px 14px; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+  #ab-config-btn:hover { border-color: var(--purple); color: var(--purple); }
+
+  #ab-config-panel { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+  #ab-config-panel label { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); margin-bottom: 4px; }
+  #ab-config-panel input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; margin-bottom: 14px; font-family: 'Space Mono', monospace; }
+  #ab-config-panel .ab-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  #ab-config-panel .ab-row > div { flex: 1; min-width: 220px; }
+  #ab-save-config { background: var(--purple); color: #fff; padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: 13px; }
+  #ab-config-note { font-size: 12px; color: var(--ink-soft); margin-top: -6px; margin-bottom: 14px; line-height: 1.5; }
+
+  #ab-layout { display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 820px) { #ab-layout { grid-template-columns: 1fr; } }
+
+  #ab-sidebar { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 16px; }
+  #ab-dropzone { border: 2px dashed var(--border); border-radius: 14px; padding: 22px 14px; text-align: center; font-size: 13px; color: var(--ink-soft); transition: border-color .15s, background .15s; }
+  #ab-dropzone.ab-drag { border-color: var(--purple); background: #F4F1FE; color: var(--purple); }
+  #ab-dropzone strong { color: var(--ink); display: block; margin-bottom: 4px; font-size: 14px; }
+  #ab-file-input { display: none; }
+  #ab-pick-btn { margin-top: 10px; background: var(--ink); color: #fff; padding: 8px 16px; border-radius: 10px; font-size: 12px; font-weight: 700; }
+
+  #ab-brief-list { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 460px; overflow-y: auto; }
+  .ab-brief-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; cursor: pointer; border: 1px solid transparent; }
+  .ab-brief-item:hover { background: #F6F3EC; }
+  .ab-brief-item.ab-active { background: #F4F1FE; border-color: var(--purple); }
+  .ab-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .ab-brief-item .ab-bi-text { min-width: 0; }
+  .ab-brief-item .ab-bi-name { font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ab-brief-item .ab-bi-sub { font-size: 11px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #ab-empty-list { font-size: 13px; color: var(--ink-soft); text-align: center; padding: 20px 8px; }
+  #ab-overview-btn { width: 100%; text-align: left; background: transparent; padding: 10px 12px; border-radius: 12px; font-weight: 700; font-size: 13px; margin-top: 14px; border: 1px solid var(--border); }
+  #ab-overview-btn:hover { border-color: var(--purple); color: var(--purple); }
+
+  #ab-main { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 26px; min-height: 420px; }
+  #ab-main-empty { color: var(--ink-soft); text-align: center; padding: 80px 20px; font-size: 14px; }
+
+  .ab-stat-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 24px; }
+  .ab-stat { background: var(--bg); border-radius: 14px; padding: 14px 18px; min-width: 130px; }
+  .ab-stat .ab-stat-num { font-family: 'Space Mono', monospace; font-size: 26px; font-weight: 700; }
+  .ab-stat .ab-stat-label { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+
+  .ab-section-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); margin: 28px 0 12px; }
+  .ab-section-title:first-child { margin-top: 0; }
+
+  #ab-keyword-cloud { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .ab-kw-pill { border-radius: 999px; padding: 6px 14px; font-weight: 700; color: #fff; white-space: nowrap; }
+
+  .ab-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; }
+  .ab-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-soft); }
+
+  .ab-detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  .ab-detail-head h2 { font-size: 22px; font-weight: 800; }
+  .ab-detail-head .ab-meta { font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
+  #ab-delete-btn { background: #FCEBE7; color: var(--red); padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; }
+  #ab-delete-btn:hover { background: var(--red); color: #fff; }
+
+  .ab-card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  @media (max-width: 620px) { .ab-card-grid { grid-template-columns: 1fr; } }
+  .ab-field-card { background: var(--bg); border-radius: 14px; padding: 14px 16px; }
+  .ab-field-card.ab-full { grid-column: 1 / -1; }
+  .ab-field-card h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); margin-bottom: 6px; }
+  .ab-field-card p { font-size: 13.5px; line-height: 1.5; margin: 0; white-space: pre-wrap; }
+  .ab-field-card p:empty::after { content: "—"; color: var(--ink-soft); }
+  .ab-pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ab-tag { background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; font-size: 12px; }
+
+  .ab-bipolar { display: flex; flex-direction: column; gap: 14px; margin-top: 6px; }
+  .ab-bp-row { display: grid; grid-template-columns: 90px 1fr 90px; align-items: center; gap: 10px; font-size: 12px; }
+  .ab-bp-label { color: var(--ink-soft); }
+  .ab-bp-label.ab-right { text-align: right; }
+  .ab-bp-track { position: relative; height: 6px; background: var(--border); border-radius: 999px; }
+  .ab-bp-dot { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; transform: translate(-50%, -50%); border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+
+  #ab-modal-overlay { position: fixed; inset: 0; background: rgba(36,31,46,.55); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+  #ab-modal { background: #fff; border-radius: 20px; padding: 26px; max-width: 640px; width: 100%; max-height: 88vh; overflow-y: auto; }
+  #ab-modal h3 { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+  #ab-modal .ab-modal-sub { font-size: 13px; color: var(--ink-soft); margin-bottom: 18px; }
+  #ab-modal label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); margin: 12px 0 4px; }
+  #ab-modal input, #ab-modal textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; font-family: inherit; }
+  #ab-modal textarea { min-height: 54px; resize: vertical; }
+  .ab-slider-edit { display: grid; grid-template-columns: 1fr 40px; align-items: center; gap: 10px; margin-top: 10px; }
+  .ab-slider-edit input[type=range] { width: 100%; }
+  .ab-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+  #ab-modal-cancel { background: var(--bg); color: var(--ink); padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: 13px; }
+  #ab-modal-save { background: var(--purple); color: #fff; padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: 13px; }
+
+  #ab-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 13px; z-index: 10000; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  #ab-toast.ab-show { opacity: 1; }
+</style>
+
+<div id="ab-header">
+  <div>
+    <h1>Briefs de marca</h1>
+    <p>Panel interno de Ailoviu — subí un PDF de brief y quedan cargados acá, con sus palabras clave y su perfil de marca.</p>
+  </div>
+  <button id="ab-config-btn" type="button">Configuración</button>
+</div>
+
+<div id="ab-config-panel" style="display:none;">
+  <div class="ab-row">
+    <div>
+      <label>Supabase URL</label>
+      <input id="ab-cfg-url" type="text" placeholder="https://xxxx.supabase.co">
+    </div>
+    <div>
+      <label>Supabase anon key</label>
+      <input id="ab-cfg-key" type="text" placeholder="eyJhbGciOi...">
+    </div>
+  </div>
+  <p id="ab-config-note">Estos datos quedan guardados en este navegador (localStorage), no en el código del widget. La anon key de Supabase es pública por diseño — igual, cualquiera que inspeccione el HTML embebido en la página va a poder verla si la pegás directamente en el código en vez de acá. Si en algún momento esto necesita ser realmente privado, avisame y lo pasamos a un endpoint con autenticación propia.</p>
+  <button id="ab-save-config" type="button">Guardar configuración</button>
+</div>
+
+<div id="ab-layout" style="display:none;">
+  <div id="ab-sidebar">
+    <div id="ab-dropzone">
+      <strong>Cargar brief</strong>
+      Arrastrá un PDF acá
+      <input id="ab-file-input" type="file" accept="application/pdf" multiple>
+      <button id="ab-pick-btn" type="button">Elegir archivo</button>
+    </div>
+    <button id="ab-overview-btn" type="button">📊 Ver panel general</button>
+    <ul id="ab-brief-list"></ul>
+  </div>
+  <div id="ab-main">
+    <div id="ab-main-empty">Cargando briefs…</div>
+  </div>
+</div>
+
+<div id="ab-toast"></div>
+
+</div>
+
+<script>
+(function(){
+  const APP = document.getElementById('ailoviu-briefs-app');
+  const $ = (sel) => APP.querySelector(sel);
+  const $$ = (sel) => Array.from(APP.querySelectorAll(sel));
+
+  const PALETTE = ['#5B3CE8','#0FA3A3','#FF8A3D','#D6336C','#2E9955','#C99A00','#E8503A'];
+  const colorFor = (i) => PALETTE[i % PALETTE.length];
+
+  const SLIDER_DEFS = [
+    ['necesidad_lujo', 'Necesidad', 'Lujo'],
+    ['neutro_disruptivo', 'Neutro', 'Disruptivo'],
+    ['atemporal_moda', 'Atemporal', 'De moda'],
+    ['divertido_serio', 'Divertido', 'Serio'],
+    ['casual_formal', 'Casual', 'Formal'],
+    ['exotico_comun', 'Exótico', 'Común'],
+    ['discreto_agresivo', 'Discreto', 'Agresivo'],
+    ['industrial_casero', 'Industrial', 'Casero'],
+    ['moderno_antiguo', 'Moderno', 'Antiguo'],
+    ['clasico_innovador', 'Clásico', 'Innovador'],
+  ];
+
+  const FIELD_LABELS = [
+    ['correo', 'Correo'],
+    ['cliente', 'Cliente/es'],
+    ['nombre_marca', 'Nombre de la Marca'],
+    ['significado_nombre', 'Significado del Nombre'],
+    ['marca_representara_otro', 'La marca representará (otro)'],
+    ['explicar_detalladamente', 'Explicar detalladamente'],
+    ['referentes_sector', 'Referentes del sector'],
+    ['que_ofrece', '¿Qué ofrece su marca?'],
+    ['beneficios', 'Beneficios que ofrece la marca'],
+    ['palabras_clave', 'Palabras clave'],
+    ['animal_personaje', 'Auto, personaje o animal'],
+    ['lineas_productos', 'Líneas de productos / submarcas'],
+    ['publico_objetivo', 'Público objetivo'],
+    ['posicion_mercado', 'Posición en el mercado'],
+    ['diferencia_competitiva', 'Diferencia competitiva clave'],
+    ['segmento_edad_otro', 'Segmento de edad (otro)'],
+    ['perfil_socioeconomico_otro', 'Perfil socioeconómico (otro)'],
+    ['info_relevante', 'Información relevante'],
+    ['trabajo_a_realizar', 'Trabajo a Realizar'],
+    ['marca_representara', 'La marca representará'],
+    ['segmento_edad', 'Segmento de edad'],
+    ['perfil_socioeconomico', 'Perfil socioeconómico'],
+    ['_boundary', 'Necesidad'],
+  ];
+
+  let db = null;
+  let briefs = [];
+  let activeId = null; // null = overview
+
+  // ---------- Config ----------
+  function loadConfig() {
+    return {
+      url: localStorage.getItem('ab_supabase_url') || '',
+      key: localStorage.getItem('ab_supabase_key') || '',
+    };
+  }
+  function saveConfig(url, key) {
+    localStorage.setItem('ab_supabase_url', url);
+    localStorage.setItem('ab_supabase_key', key);
+  }
+  function initDb() {
+    const cfg = loadConfig();
+    if (!cfg.url || !cfg.key) return false;
+    db = window.supabase.createClient(cfg.url, cfg.key);
+    return true;
+  }
+
+  $('#ab-config-btn').addEventListener('click', () => {
+    const panel = $('#ab-config-panel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    const cfg = loadConfig();
+    $('#ab-cfg-url').value = cfg.url;
+    $('#ab-cfg-key').value = cfg.key;
+  });
+  $('#ab-save-config').addEventListener('click', () => {
+    const url = $('#ab-cfg-url').value.trim();
+    const key = $('#ab-cfg-key').value.trim();
+    if (!url || !key) { toast('Completá URL y key.'); return; }
+    saveConfig(url, key);
+    $('#ab-config-panel').style.display = 'none';
+    boot();
+  });
+
+  function toast(msg) {
+    const t = $('#ab-toast');
+    t.textContent = msg;
+    t.classList.add('ab-show');
+    setTimeout(() => t.classList.remove('ab-show'), 2600);
+  }
+
+  // ---------- PDF parsing ----------
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  async function extractPdfText(file) {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let full = '';
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      full += content.items.map(it => it.str).join(' ') + ' ';
+    }
+    return full;
+  }
+
+  function splitComma(s) { return s ? s.split(',').map(x => x.trim()).filter(Boolean) : []; }
+  // Palabras clave: distintos clientes las separan con "." o con ",", así que partimos por ambos.
+  function splitKeywords(s) { return s ? s.split(/[.,]/).map(x => x.trim()).filter(Boolean) : []; }
+
+  function parseBriefText(rawText) {
+    const text = rawText.replace(/\s+/g, ' ').trim();
+    let cursor = 0;
+    const positions = [];
+    for (const [key, label] of FIELD_LABELS) {
+      const idx = text.indexOf(label, cursor);
+      if (idx === -1) { positions.push(null); continue; }
+      positions.push({ key, start: idx, len: label.length });
+      cursor = idx + label.length;
+    }
+
+    const result = {};
+    for (let i = 0; i < positions.length; i++) {
+      const p = positions[i];
+      if (!p) continue;
+      const next = positions.slice(i + 1).find(x => x);
+      const end = next ? next.start : text.length;
+      let value = text.slice(p.start + p.len, end).trim();
+      if (/^sin respuesta/i.test(value)) value = '';
+      result[p.key] = value;
+    }
+
+    const lastPos = [...positions].reverse().find(x => x);
+    const tail = lastPos ? text.slice(lastPos.start) : '';
+    const sliderMatches = [...tail.matchAll(/(\d{1,2})\s*\/\s*10/g)].map(m => parseInt(m[1], 10));
+    const sliders = {};
+    SLIDER_DEFS.forEach(([key], i) => { sliders[key] = Number.isFinite(sliderMatches[i]) ? sliderMatches[i] : 5; });
+
+    return {
+      correo: result.correo || '',
+      cliente: result.cliente || '',
+      nombre_marca: result.nombre_marca || '',
+      significado_nombre: result.significado_nombre || '',
+      marca_representara_otro: result.marca_representara_otro || '',
+      explicar_detalladamente: result.explicar_detalladamente || '',
+      referentes_sector: result.referentes_sector || '',
+      que_ofrece: result.que_ofrece || '',
+      beneficios: result.beneficios || '',
+      palabras_clave: splitKeywords(result.palabras_clave),
+      animal_personaje: result.animal_personaje || '',
+      lineas_productos: result.lineas_productos || '',
+      publico_objetivo: result.publico_objetivo || '',
+      posicion_mercado: result.posicion_mercado || '',
+      diferencia_competitiva: result.diferencia_competitiva || '',
+      segmento_edad_otro: result.segmento_edad_otro || '',
+      perfil_socioeconomico_otro: result.perfil_socioeconomico_otro || '',
+      info_relevante: result.info_relevante || '',
+      trabajo_a_realizar: splitComma(result.trabajo_a_realizar),
+      marca_representara: splitComma(result.marca_representara),
+      segmento_edad: splitComma(result.segmento_edad),
+      perfil_socioeconomico: splitComma(result.perfil_socioeconomico),
+      sliders,
+      raw_text: rawText,
+    };
+  }
+
+  // ---------- Upload flow ----------
+  const dropzone = $('#ab-dropzone');
+  const fileInput = $('#ab-file-input');
+  $('#ab-pick-btn').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+  ['dragenter', 'dragover'].forEach(ev => dropzone.addEventListener(ev, (e) => { e.preventDefault(); dropzone.classList.add('ab-drag'); }));
+  ['dragleave', 'drop'].forEach(ev => dropzone.addEventListener(ev, (e) => { e.preventDefault(); dropzone.classList.remove('ab-drag'); }));
+  dropzone.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files));
+
+  async function handleFiles(fileList) {
+    if (!db) { toast('Configurá Supabase primero.'); return; }
+    for (const file of Array.from(fileList)) {
+      if (file.type !== 'application/pdf') continue;
+      toast('Leyendo ' + file.name + '…');
+      try {
+        const rawText = await extractPdfText(file);
+        const parsed = parseBriefText(rawText);
+        openReviewModal(parsed, file.name);
+      } catch (err) {
+        console.error(err);
+        toast('No se pudo leer ' + file.name);
+      }
+    }
+    fileInput.value = '';
+  }
+
+  // ---------- Review modal ----------
+  function openReviewModal(parsed, filename) {
+    const overlay = document.createElement('div');
+    overlay.id = 'ab-modal-overlay';
+    overlay.innerHTML = `
+      <div id="ab-modal">
+        <h3>Revisá los datos extraídos</h3>
+        <div class="ab-modal-sub">${filename} — corregí lo que haga falta antes de guardar.</div>
+
+        <label>Cliente/es</label>
+        <input data-f="cliente" value="${escAttr(parsed.cliente)}">
+        <label>Correo</label>
+        <input data-f="correo" value="${escAttr(parsed.correo)}">
+        <label>Nombre de la marca</label>
+        <input data-f="nombre_marca" value="${escAttr(parsed.nombre_marca)}">
+        <label>Palabras clave (separadas por coma)</label>
+        <input data-f="palabras_clave" value="${escAttr(parsed.palabras_clave.join(', '))}">
+        <label>Explicar detalladamente</label>
+        <textarea data-f="explicar_detalladamente">${escHtml(parsed.explicar_detalladamente)}</textarea>
+        <label>Público objetivo</label>
+        <textarea data-f="publico_objetivo">${escHtml(parsed.publico_objetivo)}</textarea>
+
+        <label>Perfil de marca (0–10)</label>
+        <div id="ab-slider-edits"></div>
+
+        <div class="ab-modal-actions">
+          <button id="ab-modal-cancel" type="button">Cancelar</button>
+          <button id="ab-modal-save" type="button">Guardar brief</button>
+        </div>
+      </div>`;
+    APP.appendChild(overlay);
+
+    const editsWrap = overlay.querySelector('#ab-slider-edits');
+    SLIDER_DEFS.forEach(([key, left, right]) => {
+      const row = document.createElement('div');
+      row.innerHTML = `
+        <div style="font-size:11px;color:var(--ink-soft);margin-top:8px;">${left} ↔ ${right}</div>
+        <div class="ab-slider-edit">
+          <input type="range" min="0" max="10" step="1" value="${parsed.sliders[key]}" data-slider="${key}">
+          <span class="mono" data-slider-val="${key}">${parsed.sliders[key]}</span>
+        </div>`;
+      editsWrap.appendChild(row);
+    });
+    editsWrap.addEventListener('input', (e) => {
+      if (e.target.dataset.slider) {
+        overlay.querySelector('[data-slider-val="' + e.target.dataset.slider + '"]').textContent = e.target.value;
+      }
+    });
+
+    overlay.querySelector('#ab-modal-cancel').addEventListener('click', () => overlay.remove());
+    overlay.querySelector('#ab-modal-save').addEventListener('click', async () => {
+      overlay.querySelectorAll('[data-f]').forEach(el => {
+        const f = el.dataset.f;
+        if (f === 'palabras_clave') parsed[f] = el.value.split(',').map(x => x.trim()).filter(Boolean);
+        else parsed[f] = el.value;
+      });
+      overlay.querySelectorAll('[data-slider]').forEach(el => {
+        parsed.sliders[el.dataset.slider] = parseInt(el.value, 10);
+      });
+      parsed.pdf_filename = filename;
+      await saveBrief(parsed);
+      overlay.remove();
+    });
+  }
+
+  function escHtml(s) { return (s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+  function escAttr(s) { return escHtml(s).replace(/"/g, '&quot;'); }
+
+  async function saveBrief(parsed) {
+    const { error } = await db.from('briefs').insert([parsed]);
+    if (error) { console.error(error); toast('Error al guardar: ' + error.message); return; }
+    toast('Brief guardado.');
+    await loadBriefs();
+    activeId = null;
+    render();
+  }
+
+  async function deleteBrief(id) {
+    if (!confirm('¿Eliminar este brief?')) return;
+    const { error } = await db.from('briefs').delete().eq('id', id);
+    if (error) { toast('Error al eliminar.'); return; }
+    activeId = null;
+    await loadBriefs();
+    render();
+  }
+
+  // ---------- Data ----------
+  async function loadBriefs() {
+    const { data, error } = await db.from('briefs').select('*').order('created_at', { ascending: false });
+    if (error) { toast('Error al cargar briefs: ' + error.message); briefs = []; return; }
+    briefs = data || [];
+  }
+
+  // ---------- Rendering ----------
+  function render() {
+    $('#ab-layout').style.display = 'grid';
+    renderSidebar();
+    if (activeId) renderDetail(briefs.find(b => b.id === activeId));
+    else renderOverview();
+  }
+
+  function renderSidebar() {
+    const list = $('#ab-brief-list');
+    list.innerHTML = '';
+    if (!briefs.length) {
+      list.innerHTML = '<div id="ab-empty-list">Todavía no hay briefs cargados.</div>';
+      return;
+    }
+    briefs.forEach((b, i) => {
+      const li = document.createElement('li');
+      li.className = 'ab-brief-item' + (b.id === activeId ? ' ab-active' : '');
+      const date = b.created_at ? new Date(b.created_at).toLocaleDateString('es-AR') : '';
+      li.innerHTML = `
+        <span class="ab-dot" style="background:${colorFor(i)}"></span>
+        <span class="ab-bi-text">
+          <span class="ab-bi-name">${escHtml(b.cliente || 'Sin nombre')}</span>
+          <span class="ab-bi-sub">${escHtml(b.nombre_marca || '—')} · ${date}</span>
+        </span>`;
+      li.addEventListener('click', () => { activeId = b.id; render(); });
+      list.appendChild(li);
+    });
+  }
+
+  function renderOverview() {
+    const main = $('#ab-main');
+    if (!briefs.length) {
+      main.innerHTML = '<div id="ab-main-empty">Subí tu primer PDF de brief para ver el panel general acá.</div>';
+      return;
+    }
+    const kwCounts = {};
+    briefs.forEach(b => (b.palabras_clave || []).forEach(k => {
+      const key = k.toLowerCase();
+      kwCounts[key] = (kwCounts[key] || 0) + 1;
+    }));
+    const kwSorted = Object.entries(kwCounts).sort((a, b) => b[1] - a[1]).slice(0, 24);
+    const maxCount = kwSorted.length ? kwSorted[0][1] : 1;
+
+    main.innerHTML = `
+      <div class="ab-stat-row">
+        <div class="ab-stat"><div class="ab-stat-num mono">${briefs.length}</div><div class="ab-stat-label">Briefs cargados</div></div>
+        <div class="ab-stat"><div class="ab-stat-num mono">${Object.keys(kwCounts).length}</div><div class="ab-stat-label">Palabras clave únicas</div></div>
+      </div>
+
+      <div class="ab-section-title">Palabras clave más frecuentes</div>
+      <div id="ab-keyword-cloud"></div>
+
+      <div class="ab-section-title">Perfil de marca — comparativa</div>
+      <div id="ab-radar-wrap"></div>
+    `;
+
+    const cloud = main.querySelector('#ab-keyword-cloud');
+    if (!kwSorted.length) {
+      cloud.innerHTML = '<span style="color:var(--ink-soft);font-size:13px;">Sin palabras clave todavía.</span>';
+    } else {
+      kwSorted.forEach(([word, count], i) => {
+        const size = 12 + (count / maxCount) * 10;
+        const pill = document.createElement('span');
+        pill.className = 'ab-kw-pill';
+        pill.style.background = colorFor(i);
+        pill.style.fontSize = size + 'px';
+        pill.textContent = word + (count > 1 ? ' · ' + count : '');
+        cloud.appendChild(pill);
+      });
+    }
+
+    const radarWrap = main.querySelector('#ab-radar-wrap');
+    const radarData = briefs.map((b, i) => ({ label: b.cliente || b.nombre_marca || ('Brief ' + (i + 1)), color: colorFor(i), sliders: b.sliders || {} }));
+    radarWrap.innerHTML = renderRadarSVG(radarData) + `
+      <div class="ab-legend">
+        ${radarData.map(r => `<span class="ab-legend-item"><span class="ab-dot" style="background:${r.color}"></span>${escHtml(r.label)}</span>`).join('')}
+      </div>`;
+  }
+
+  function polar(cx, cy, r, angleDeg) {
+    const a = (angleDeg - 90) * Math.PI / 180;
+    return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  }
+
+  function renderRadarSVG(items) {
+    const size = 320, cx = size / 2, cy = size / 2, maxR = 120;
+    const n = SLIDER_DEFS.length;
+    const step = 360 / n;
+    let rings = '';
+    [2.5, 5, 7.5, 10].forEach(v => {
+      const pts = SLIDER_DEFS.map((_, i) => polar(cx, cy, (v / 10) * maxR, i * step).join(',')).join(' ');
+      rings += `<polygon points="${pts}" fill="none" stroke="#ECE6DA" stroke-width="1"/>`;
+    });
+    let axes = '';
+    SLIDER_DEFS.forEach((_, i) => {
+      const [x, y] = polar(cx, cy, maxR, i * step);
+      axes += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#ECE6DA" stroke-width="1"/>`;
+    });
+    let polys = '';
+    items.forEach(item => {
+      const pts = SLIDER_DEFS.map(([key], i) => {
+        const v = item.sliders[key] ?? 5;
+        return polar(cx, cy, (v / 10) * maxR, i * step).join(',');
+      }).join(' ');
+      polys += `<polygon points="${pts}" fill="${item.color}" fill-opacity="0.12" stroke="${item.color}" stroke-width="2"/>`;
+    });
+    return `<svg viewBox="0 0 ${size} ${size}" style="width:100%;max-width:340px;display:block;margin:0 auto;">${rings}${axes}${polys}</svg>`;
+  }
+
+  function renderDetail(b) {
+    if (!b) { activeId = null; renderOverview(); return; }
+    const main = $('#ab-main');
+    const date = b.created_at ? new Date(b.created_at).toLocaleDateString('es-AR') : '';
+    main.innerHTML = `
+      <div class="ab-detail-head">
+        <div>
+          <h2>${escHtml(b.cliente || 'Sin nombre')}</h2>
+          <div class="ab-meta">${escHtml(b.nombre_marca || 'Sin nombre de marca')} · ${escHtml(b.correo || '')} · ${date}</div>
+        </div>
+        <button id="ab-delete-btn" type="button">Eliminar</button>
+      </div>
+
+      <div class="ab-section-title">Palabras clave</div>
+      <div class="ab-pill-group">${(b.palabras_clave || []).map(k => `<span class="ab-tag">${escHtml(k)}</span>`).join('') || '<span style="color:var(--ink-soft);font-size:13px;">—</span>'}</div>
+
+      <div class="ab-section-title">Perfil de marca</div>
+      <div class="ab-bipolar">
+        ${SLIDER_DEFS.map(([key, left, right]) => {
+          const v = (b.sliders && b.sliders[key] != null) ? b.sliders[key] : 5;
+          return `
+          <div class="ab-bp-row">
+            <span class="ab-bp-label">${left}</span>
+            <span class="ab-bp-track"><span class="ab-bp-dot" style="left:${v * 10}%;background:${colorFor(SLIDER_DEFS.findIndex(s => s[0] === key))}"></span></span>
+            <span class="ab-bp-label ab-right">${right}</span>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div class="ab-section-title">Brief completo</div>
+      <div class="ab-card-grid">
+        <div class="ab-field-card"><h4>Significado del nombre</h4><p>${escHtml(b.significado_nombre)}</p></div>
+        <div class="ab-field-card"><h4>Animal / personaje / auto</h4><p>${escHtml(b.animal_personaje)}</p></div>
+        <div class="ab-field-card ab-full"><h4>Explicación del proyecto</h4><p>${escHtml(b.explicar_detalladamente)}</p></div>
+        <div class="ab-field-card ab-full"><h4>¿Qué ofrece la marca?</h4><p>${escHtml(b.que_ofrece)}</p></div>
+        <div class="ab-field-card ab-full"><h4>Beneficios</h4><p>${escHtml(b.beneficios)}</p></div>
+        <div class="ab-field-card"><h4>Público objetivo</h4><p>${escHtml(b.publico_objetivo)}</p></div>
+        <div class="ab-field-card"><h4>Posición en el mercado</h4><p>${escHtml(b.posicion_mercado)}</p></div>
+        <div class="ab-field-card ab-full"><h4>Diferencia competitiva</h4><p>${escHtml(b.diferencia_competitiva)}</p></div>
+        <div class="ab-field-card"><h4>Líneas de productos / submarcas</h4><p>${escHtml(b.lineas_productos)}</p></div>
+        <div class="ab-field-card ab-full"><h4>Referentes del sector</h4><p>${escHtml(b.referentes_sector)}</p></div>
+        <div class="ab-field-card"><h4>Segmento de edad</h4><div class="ab-pill-group">${(b.segmento_edad || []).map(k => `<span class="ab-tag">${escHtml(k)}</span>`).join('') || '<p></p>'}</div></div>
+        <div class="ab-field-card"><h4>Perfil socioeconómico</h4><div class="ab-pill-group">${(b.perfil_socioeconomico || []).map(k => `<span class="ab-tag">${escHtml(k)}</span>`).join('') || '<p></p>'}</div></div>
+        <div class="ab-field-card"><h4>La marca representará</h4><div class="ab-pill-group">${(b.marca_representara || []).map(k => `<span class="ab-tag">${escHtml(k)}</span>`).join('') || '<p></p>'}</div></div>
+        <div class="ab-field-card"><h4>Trabajo a realizar</h4><div class="ab-pill-group">${(b.trabajo_a_realizar || []).map(k => `<span class="ab-tag">${escHtml(k)}</span>`).join('') || '<p></p>'}</div></div>
+        <div class="ab-field-card ab-full"><h4>Información relevante</h4><p>${escHtml(b.info_relevante)}</p></div>
+      </div>
+    `;
+    main.querySelector('#ab-delete-btn').addEventListener('click', () => deleteBrief(b.id));
+  }
+
+  $('#ab-overview-btn').addEventListener('click', () => { activeId = null; render(); });
+
+  // ---------- Boot ----------
+  async function boot() {
+    if (!initDb()) {
+      $('#ab-config-panel').style.display = 'block';
+      $('#ab-layout').style.display = 'none';
+      return;
+    }
+    $('#ab-layout').style.display = 'grid';
+    $('#ab-main').innerHTML = '<div id="ab-main-empty">Cargando briefs…</div>';
+    await loadBriefs();
+    render();
+  }
+
+  boot();
+})();
+</script>
