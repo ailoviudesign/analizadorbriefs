@@ -71,7 +71,7 @@
   .ab-brief-item .ab-bi-name { font-weight: 500; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ab-brief-item .ab-bi-sub { font-size: 11px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #ab-empty-list { font-size: 13px; color: var(--ink-soft); text-align: center; padding: 20px 8px; }
-  #ab-overview-btn { width: 100%; text-align: left; background: transparent; padding: 10px 12px; border-radius: 12px; font-weight: 700; font-size: 16px; margin-top: 14px; border: 1px solid var(--border); }
+  #ab-overview-btn { width: 100%; text-align: left; background: transparent; padding: 10px 12px; border-radius: 12px; font-weight: 800; font-size: 22px; margin-top: 14px; border: 1px solid var(--border); }
   #ab-overview-btn:hover { border-color: var(--orange); color: var(--orange); }
 
   #ab-main { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 26px; min-height: 420px; }
@@ -90,6 +90,14 @@
 
   .ab-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; }
   .ab-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-soft); }
+
+  .ab-summary-list { display: flex; flex-direction: column; gap: 10px; }
+  .ab-summary-item { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; background: var(--bg); border-radius: 12px; cursor: pointer; transition: background .15s; }
+  .ab-summary-item:hover { background: #F4F1FE; }
+  .ab-summary-item .ab-dot { margin-top: 5px; }
+  .ab-summary-text { min-width: 0; }
+  .ab-summary-text strong { font-size: 13px; display: block; margin-bottom: 2px; }
+  .ab-summary-text p { font-size: 13px; color: var(--ink-soft); margin: 0; line-height: 1.5; }
 
   .ab-detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
   .ab-detail-head h2 { font-size: 22px; font-weight: 600; }
@@ -128,6 +136,8 @@
   #ab-modal-save { background: var(--purple); color: #fff; padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: 13px; }
 
   #ab-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 12px 20px; border-radius: 12px; font-size: 13px; z-index: 10000; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  #ab-radar-tooltip { position: fixed; pointer-events: none; background: var(--ink); color: #fff; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 8px; z-index: 10001; opacity: 0; transition: opacity .1s; white-space: nowrap; }
+  #ab-radar-tooltip.ab-show { opacity: 1; }
   #ab-toast.ab-show { opacity: 1; }
 </style>
 
@@ -160,10 +170,11 @@
     <div id="ab-dropzone">
       <strong>Cargar brief</strong>
       Arrastrá un PDF acá
+      </br>
       <input id="ab-file-input" type="file" accept="application/pdf" multiple>
       <button id="ab-pick-btn" type="button">Elegir archivo</button>
     </div>
-    <button id="ab-overview-btn" type="button">PANEL GENERAL 💾</button>
+    <button id="ab-overview-btn" type="button">PANEL GENERAL</button>
     <ul id="ab-brief-list"></ul>
   </div>
   <div id="ab-main">
@@ -172,6 +183,7 @@
 </div>
 
 <div id="ab-toast"></div>
+<div id="ab-radar-tooltip"></div>
 
 </div>
 
@@ -436,6 +448,7 @@
 
   function escHtml(s) { return (s || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
   function escAttr(s) { return escHtml(s).replace(/"/g, '&quot;'); }
+  function truncate(s, n) { if (!s) return ''; s = s.trim(); return s.length > n ? s.slice(0, n).trim() + '…' : s; }
 
   async function saveBrief(parsed) {
     const { error } = await db.from('briefs').insert([parsed]);
@@ -491,6 +504,18 @@
     });
   }
 
+  function summarySection(title, fieldKey) {
+    const rows = briefs.map((b, i) => {
+      const text = b[fieldKey];
+      if (!text) return '';
+      return `<div class="ab-summary-item" data-id="${b.id}">
+        <span class="ab-dot" style="background:${colorFor(i)}"></span>
+        <div class="ab-summary-text"><strong>${escHtml(b.cliente || b.nombre_marca || 'Sin nombre')}</strong><p>${escHtml(truncate(text, 170))}</p></div>
+      </div>`;
+    }).filter(Boolean).join('');
+    return `<div class="ab-section-title">${title}</div><div class="ab-summary-list">${rows || '<span style="color:var(--ink-soft);font-size:13px;">Sin datos todavía.</span>'}</div>`;
+  }
+
   function renderOverview() {
     const main = $('#ab-main');
     if (!briefs.length) {
@@ -516,6 +541,11 @@
 
       <div class="ab-section-title">Perfil de marca — comparativa</div>
       <div id="ab-radar-wrap"></div>
+
+      ${summarySection('Resumen del proyecto', 'explicar_detalladamente')}
+      ${summarySection('Beneficios de la marca', 'beneficios')}
+      ${summarySection('Público objetivo', 'publico_objetivo')}
+      ${summarySection('Diferencia competitiva', 'diferencia_competitiva')}
     `;
 
     const cloud = main.querySelector('#ab-keyword-cloud');
@@ -539,6 +569,23 @@
       <div class="ab-legend">
         ${radarData.map(r => `<span class="ab-legend-item"><span class="ab-dot" style="background:${r.color}"></span>${escHtml(r.label)}</span>`).join('')}
       </div>`;
+
+    const radarTip = $('#ab-radar-tooltip');
+    radarWrap.querySelectorAll('.ab-radar-dot').forEach(dot => {
+      dot.addEventListener('mouseenter', () => {
+        radarTip.textContent = dot.dataset.tip;
+        radarTip.classList.add('ab-show');
+      });
+      dot.addEventListener('mousemove', (e) => {
+        radarTip.style.left = (e.clientX + 14) + 'px';
+        radarTip.style.top = (e.clientY + 14) + 'px';
+      });
+      dot.addEventListener('mouseleave', () => radarTip.classList.remove('ab-show'));
+    });
+
+    main.querySelectorAll('.ab-summary-item').forEach(el => {
+      el.addEventListener('click', () => { activeId = el.dataset.id; render(); });
+    });
   }
 
   function polar(cx, cy, r, angleDeg) {
@@ -547,7 +594,7 @@
   }
 
   function renderRadarSVG(items) {
-    const size = 320, cx = size / 2, cy = size / 2, maxR = 120;
+    const size = 420, cx = size / 2, cy = size / 2, maxR = 110, labelR = maxR + 42;
     const n = SLIDER_DEFS.length;
     const step = 360 / n;
     let rings = '';
@@ -568,7 +615,33 @@
       }).join(' ');
       polys += `<polygon points="${pts}" fill="${item.color}" fill-opacity="0.12" stroke="${item.color}" stroke-width="2"/>`;
     });
-    return `<svg viewBox="0 0 ${size} ${size}" style="width:100%;max-width:340px;display:block;margin:0 auto;">${rings}${axes}${polys}</svg>`;
+    // Etiquetas en las puntas: cada eje muestra su polo izquierdo y derecho (ej. "Necesidad" / "Lujo"),
+    // con el anchor del texto ajustado según el cuadrante para que no queden pegadas al gráfico.
+    let labels = '';
+    SLIDER_DEFS.forEach(([key, left, right], i) => {
+      const angle = i * step;
+      const [x, y] = polar(cx, cy, labelR, angle);
+      let anchor = 'middle';
+      if (x > cx + 6) anchor = 'start';
+      else if (x < cx - 6) anchor = 'end';
+      labels += `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="13" font-weight="700" font-family="Nunito, sans-serif" fill="#6b6478">` +
+        `<tspan x="${x}" dy="-5">${left}</tspan>` +
+        `<tspan x="${x}" dy="12">${right}</tspan>` +
+      `</text>`;
+    });
+    // Puntos en cada vértice del polígono: al pasar el mouse muestran solo la palabra
+    // del polo ganador (el más cercano a lo que respondieron) y el número.
+    let dots = '';
+    items.forEach(item => {
+      SLIDER_DEFS.forEach(([key, left, right], i) => {
+        const v = item.sliders[key] ?? 5;
+        const [x, y] = polar(cx, cy, (v / 10) * maxR, i * step);
+        const word = v < 5 ? (left + ' / ' + v) : v > 5 ? (right + ' / ' + v) : (left + ' / 5 / ' + right);
+        const tip = escAttr(word);
+        dots += `<circle class="ab-radar-dot" cx="${x}" cy="${y}" r="5" fill="${item.color}" stroke="#fff" stroke-width="1.5" data-tip="${tip}" style="cursor:pointer;"/>`;
+      });
+    });
+    return `<svg viewBox="0 0 ${size} ${size}" style="width:100%;max-width:400px;display:block;margin:0 auto;">${rings}${axes}${polys}${labels}${dots}</svg>`;
   }
 
   function renderDetail(b) {
@@ -639,3 +712,4 @@
   boot();
 })();
 </script>
+</div>
